@@ -1,0 +1,166 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  WAITER
+  KITCHEN
+  CASHIER
+}
+
+enum RestaurantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  CHECKOUT
+}
+
+enum TableSessionStatus {
+  OPEN
+  CHECKOUT
+  CLOSED
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  IN_PROGRESS
+  READY
+  CANCELLED
+  CLOSED
+}
+
+enum OrderItemStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  CANCELLED
+}
+
+model Restaurant {
+  id        String            @id @default(uuid())
+  name      String
+  status    RestaurantStatus  @default(ACTIVE)
+  timezone  String            @default("America/Mexico_City")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  users         User[]
+  tables        Table[]
+  tableSessions TableSession[]
+  orders        Order[]
+  orderItems     OrderItem[]
+
+  @@map("restaurants")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  restaurantId String
+  name         String
+  email        String
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  openedSessions  TableSession[]
+  ordersCreated   Order[] @relation("OrdersCreatedBy")
+
+  // Email is unique per restaurant (multi-tenant)
+  @@unique([restaurantId, email])
+  @@map("users")
+}
+
+model Table {
+  id           String      @id @default(uuid())
+  restaurantId String
+  number       Int
+  area         String?
+  status       TableStatus @default(AVAILABLE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  restaurant Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  sessions   TableSession[]
+
+  @@unique([restaurantId, number])
+  @@map("tables")
+}
+
+model TableSession {
+  id            String             @id @default(uuid())
+  restaurantId  String
+  tableId       String
+  openedByUserId String
+  status        TableSessionStatus @default(OPEN)
+  openedAt      DateTime           @default(now())
+  closedAt      DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table       Table      @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  openedBy    User       @relation(fields: [openedByUserId], references: [id], onDelete: Restrict)
+  orders      Order[]
+
+  @@map("table_sessions")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  restaurantId    String
+  tableSessionId  String
+  createdByUserId String
+  status          OrderStatus @default(DRAFT)
+  notes           String?
+  confirmedAt     DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  tableSession TableSession @relation(fields: [tableSessionId], references: [id], onDelete: Cascade)
+  createdBy    User        @relation("OrdersCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  items        OrderItem[]
+
+  @@index([restaurantId, tableSessionId])
+  @@index([restaurantId, status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String         @id @default(uuid())
+  restaurantId String
+  orderId      String
+  name         String
+  qty          Int
+  unitPrice    Decimal?       @db.Decimal(10,2)
+  status       OrderItemStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  order      Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, orderId])
+  @@index([restaurantId, status])
+  @@map("order_items")
+}

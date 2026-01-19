@@ -1,0 +1,25 @@
+{
+  "name": "@restaurante-app/mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "private": true,
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "expo export",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "expo": "~50.0.0",
+    "expo-router": "~3.0.0",
+    "react": "18.2.0",
+    "react-native": "0.73.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@types/react": "~18.2.0",
+    "typescript": "^5.3.0"
+  }
+}
