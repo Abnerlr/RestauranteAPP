@@ -107,26 +107,43 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== 'DRAFT') {
-      throw new ConflictException('Cannot add items to order that is not in DRAFT status');
-    }
+    // Atomic check and create in transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Advisory lock on order to prevent concurrent updates
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
 
-    // Create order item
-    const item = await this.prisma.orderItem.create({
-      data: {
-        restaurantId,
-        orderId,
-        name: addOrderItemDto.name,
-        qty: addOrderItemDto.qty,
-        unitPrice: addOrderItemDto.unitPrice
-          ? new Decimal(addOrderItemDto.unitPrice)
-          : null,
-        status: 'PENDING',
-        notes: addOrderItemDto.notes || null,
-      },
+      // Verify order is still in DRAFT status (atomic check)
+      const orderCheck = await tx.order.findFirst({
+        where: {
+          id: orderId,
+          restaurantId,
+          status: 'DRAFT',
+        },
+      });
+
+      if (!orderCheck) {
+        throw new ConflictException('Cannot add items to order that is not in DRAFT status');
+      }
+
+      // Create order item
+      const item = await tx.orderItem.create({
+        data: {
+          restaurantId,
+          orderId,
+          name: addOrderItemDto.name,
+          qty: addOrderItemDto.qty,
+          unitPrice: addOrderItemDto.unitPrice
+            ? new Decimal(addOrderItemDto.unitPrice)
+            : null,
+          status: 'PENDING',
+          notes: addOrderItemDto.notes || null,
+        },
+      });
+
+      return item;
     });
 
-    return this.mapOrderItemToResponse(item);
+    return this.mapOrderItemToResponse(result);
   }
 
   async updateItem(
@@ -147,10 +164,6 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== 'DRAFT') {
-      throw new ConflictException('Cannot update items in order that is not in DRAFT status');
-    }
-
     const item = await this.prisma.orderItem.findFirst({
       where: {
         id: itemId,
@@ -163,11 +176,7 @@ export class OrdersService {
       throw new NotFoundException('Order item not found');
     }
 
-    if (item.status === 'CANCELLED') {
-      throw new ConflictException('Cannot update cancelled item');
-    }
-
-    // Update item
+    // Prepare update data
     const updateData: any = {};
     if (updateOrderItemDto.name !== undefined) updateData.name = updateOrderItemDto.name;
     if (updateOrderItemDto.qty !== undefined) updateData.qty = updateOrderItemDto.qty;
@@ -180,12 +189,56 @@ export class OrdersService {
       updateData.notes = updateOrderItemDto.notes || null;
     }
 
-    const updatedItem = await this.prisma.orderItem.update({
-      where: { id: itemId },
-      data: updateData,
+    // Atomic update with conditions: order must be DRAFT and item must not be CANCELLED
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Advisory lock on order to prevent concurrent updates
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
+
+      // Verify order is still in DRAFT status (atomic check)
+      const orderCheck = await tx.order.findFirst({
+        where: {
+          id: orderId,
+          restaurantId,
+          status: 'DRAFT',
+        },
+      });
+
+      if (!orderCheck) {
+        throw new ConflictException('Cannot update items in order that is not in DRAFT status');
+      }
+
+      // Atomic update: only update if item is not CANCELLED
+      const updateCount = await tx.orderItem.updateMany({
+        where: {
+          id: itemId,
+          orderId,
+          restaurantId,
+          status: { not: 'CANCELLED' },
+        },
+        data: updateData,
+      });
+
+      if (updateCount.count !== 1) {
+        // Check which condition failed
+        const currentItem = await tx.orderItem.findFirst({
+          where: { id: itemId, orderId, restaurantId },
+        });
+
+        if (!currentItem || currentItem.status === 'CANCELLED') {
+          throw new ConflictException('Cannot update cancelled item');
+        }
+        throw new ConflictException('Item was modified concurrently');
+      }
+
+      // Get updated item
+      const updatedItem = await tx.orderItem.findUnique({
+        where: { id: itemId },
+      });
+
+      return updatedItem!;
     });
 
-    return this.mapOrderItemToResponse(updatedItem);
+    return this.mapOrderItemToResponse(result);
   }
 
   async deleteItem(
@@ -205,10 +258,6 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== 'DRAFT') {
-      throw new ConflictException('Cannot delete items from order that is not in DRAFT status');
-    }
-
     const item = await this.prisma.orderItem.findFirst({
       where: {
         id: itemId,
@@ -221,17 +270,58 @@ export class OrdersService {
       throw new NotFoundException('Order item not found');
     }
 
-    if (item.status === 'CANCELLED') {
-      throw new ConflictException('Item is already cancelled');
-    }
+    // Atomic soft cancel: only if order is DRAFT or CONFIRMED and item is not CANCELLED
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Advisory lock on order to prevent concurrent updates
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
 
-    // Soft cancel: set status to CANCELLED
-    const cancelledItem = await this.prisma.orderItem.update({
-      where: { id: itemId },
-      data: { status: 'CANCELLED' },
+      // Verify order is still in DRAFT or CONFIRMED status (atomic check)
+      const orderCheck = await tx.order.findFirst({
+        where: {
+          id: orderId,
+          restaurantId,
+          status: { in: ['DRAFT', 'CONFIRMED'] },
+        },
+      });
+
+      if (!orderCheck) {
+        throw new ConflictException(
+          'Cannot cancel items from order that is not in DRAFT or CONFIRMED status',
+        );
+      }
+
+      // Atomic update: only cancel if item is not CANCELLED
+      const updateCount = await tx.orderItem.updateMany({
+        where: {
+          id: itemId,
+          orderId,
+          restaurantId,
+          status: { not: 'CANCELLED' },
+        },
+        data: { status: 'CANCELLED' },
+      });
+
+      if (updateCount.count !== 1) {
+        // Check which condition failed
+        const currentItem = await tx.orderItem.findFirst({
+          where: { id: itemId, orderId, restaurantId },
+        });
+
+        if (!currentItem || currentItem.status === 'CANCELLED') {
+          throw new ConflictException('Item is already cancelled');
+        }
+        throw new ConflictException('Item was modified concurrently');
+      }
+
+      // Get updated item
+      const cancelledItem = await tx.orderItem.findUnique({
+        where: { id: itemId },
+      });
+
+      return cancelledItem!;
     });
 
-    return this.mapOrderItemToResponse(cancelledItem);
+    return this.mapOrderItemToResponse(result);
   }
 
   async confirm(restaurantId: string, orderId: string): Promise<OrderResponseDto> {
@@ -248,11 +338,6 @@ export class OrdersService {
 
     if (!order) {
       throw new NotFoundException('Order not found');
-    }
-
-    // a) Validate order.status === DRAFT
-    if (order.status !== 'DRAFT') {
-      throw new ConflictException('Order is not in DRAFT status');
     }
 
     // b) Validate order.items.length >= 1
@@ -272,23 +357,40 @@ export class OrdersService {
       throw new ConflictException('All items must be in PENDING status to confirm order');
     }
 
-    // Confirm order in transaction
+    // Atomic update with condition: only if status = DRAFT
     const result = await this.prisma.$transaction(async (tx) => {
-      const confirmedOrder = await tx.order.update({
-        where: { id: orderId },
+      // Advisory lock on order to prevent concurrent updates
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
+
+      // Atomic update: only update if status = DRAFT
+      const updateCount = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          restaurantId,
+          status: 'DRAFT',
+        },
         data: {
           status: 'CONFIRMED',
           confirmedAt: new Date(),
         },
+      });
+
+      if (updateCount.count !== 1) {
+        throw new ConflictException('Order is not in DRAFT status or was already modified');
+      }
+
+      // Get updated order with items
+      const confirmedOrder = await tx.order.findUnique({
+        where: { id: orderId },
         include: {
           items: true,
         },
       });
 
-      return confirmedOrder;
+      return confirmedOrder!;
     });
 
-    // Emit WebSocket event with complete payload
+    // Emit WebSocket event with complete payload (only if update succeeded)
     const mappedItems = result.items.map((item: any) => this.mapOrderItemToResponse(item));
     await this.eventsEmitter.emitOrderNew({
       orderId: result.id,
@@ -409,43 +511,82 @@ export class OrdersService {
 
     // Update item status and auto-update order status in transaction
     const result = await this.prisma.$transaction(async (tx) => {
-      // Update item status
-      const updatedItem = await tx.orderItem.update({
-        where: { id: itemId },
+      // Advisory lock on order to prevent concurrent updates
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
+
+      // Atomic update: only update if item is in the expected status for transition
+      const updateCount = await tx.orderItem.updateMany({
+        where: {
+          id: itemId,
+          orderId,
+          restaurantId,
+          status: previousStatus, // Only update if still in previous status
+        },
         data: { status: updateItemStatusDto.status },
       });
 
-      const previousOrderStatus = order.status;
+      if (updateCount.count !== 1) {
+        throw new ConflictException(
+          `Item status changed concurrently. Expected ${previousStatus}, but item was modified.`,
+        );
+      }
+
+      // Get updated item
+      const updatedItem = await tx.orderItem.findUnique({
+        where: { id: itemId },
+      });
+
+      // Get current order status (may have changed)
+      const currentOrder = await tx.order.findUnique({
+        where: { id: orderId },
+      });
+
+      const previousOrderStatus = currentOrder!.status;
       let orderStatusChanged = false;
       let newOrderStatus: OrderStatus | null = null;
 
       // Auto-update order status based on item status changes
       // si newStatus=IN_PROGRESS y order.status=CONFIRMED => order->IN_PROGRESS
-      if (updateItemStatusDto.status === 'IN_PROGRESS' && order.status === 'CONFIRMED') {
-        newOrderStatus = 'IN_PROGRESS';
-        orderStatusChanged = true;
-      } else if (updateItemStatusDto.status === 'READY' && order.status === 'IN_PROGRESS') {
+      if (updateItemStatusDto.status === 'IN_PROGRESS' && currentOrder!.status === 'CONFIRMED') {
+        const orderUpdateCount = await tx.order.updateMany({
+          where: {
+            id: orderId,
+            restaurantId,
+            status: 'CONFIRMED',
+          },
+          data: { status: 'IN_PROGRESS' },
+        });
+
+        if (orderUpdateCount.count === 1) {
+          newOrderStatus = 'IN_PROGRESS';
+          orderStatusChanged = true;
+        }
+      } else if (updateItemStatusDto.status === 'READY' && currentOrder!.status === 'IN_PROGRESS') {
         // si newStatus=READY y order.status=IN_PROGRESS y todos los items no CANCELLED están READY => order->READY
         const allItems = await tx.orderItem.findMany({
           where: {
             orderId,
+            restaurantId,
             status: { not: 'CANCELLED' },
           },
         });
 
         const allReady = allItems.every((i) => i.status === 'READY');
         if (allReady) {
-          newOrderStatus = 'READY';
-          orderStatusChanged = true;
-        }
-      }
+          const orderUpdateCount = await tx.order.updateMany({
+            where: {
+              id: orderId,
+              restaurantId,
+              status: 'IN_PROGRESS',
+            },
+            data: { status: 'READY' },
+          });
 
-      // Update order status if needed
-      if (orderStatusChanged && newOrderStatus) {
-        await tx.order.update({
-          where: { id: orderId },
-          data: { status: newOrderStatus },
-        });
+          if (orderUpdateCount.count === 1) {
+            newOrderStatus = 'READY';
+            orderStatusChanged = true;
+          }
+        }
       }
 
       // Get updated order with items
@@ -455,7 +596,7 @@ export class OrdersService {
       });
 
       return {
-        item: updatedItem,
+        item: updatedItem!,
         order: updatedOrder!,
         orderStatusChanged,
         newOrderStatus,
@@ -463,7 +604,7 @@ export class OrdersService {
       };
     });
 
-    // Emit WebSocket events with complete payloads
+    // Emit WebSocket events with complete payloads (only if update succeeded)
     await this.eventsEmitter.emitOrderItemStatusChanged({
       orderId,
       itemId,
@@ -502,10 +643,6 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== 'READY') {
-      throw new ConflictException('Order is not in READY status');
-    }
-
     // Validate that all non-cancelled items are READY
     const activeItems = order.items.filter((item) => item.status !== 'CANCELLED');
     const allReady = activeItems.every((item) => item.status === 'READY');
@@ -516,23 +653,40 @@ export class OrdersService {
 
     const previousStatus = order.status;
 
-    // Close order in transaction
+    // Atomic update with condition: only if status = READY
     const result = await this.prisma.$transaction(async (tx) => {
-      const closedOrder = await tx.order.update({
-        where: { id: orderId },
+      // Advisory lock on order to prevent concurrent updates
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`order:${orderId}`}))`;
+
+      // Atomic update: only update if status = READY
+      const updateCount = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          restaurantId,
+          status: 'READY',
+        },
         data: {
           status: 'CLOSED',
           closedAt: new Date(),
         },
+      });
+
+      if (updateCount.count !== 1) {
+        throw new ConflictException('Order is not in READY status or was already modified');
+      }
+
+      // Get updated order with items
+      const closedOrder = await tx.order.findUnique({
+        where: { id: orderId },
         include: {
           items: true,
         },
       });
 
-      return closedOrder;
+      return closedOrder!;
     });
 
-    // Emit WebSocket event with complete payload
+    // Emit WebSocket event with complete payload (only if update succeeded)
     await this.eventsEmitter.emitOrderStatusChanged({
       orderId: result.id,
       restaurantId: result.restaurantId,
