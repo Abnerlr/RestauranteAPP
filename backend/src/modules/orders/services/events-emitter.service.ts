@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { RealtimeGateway } from '../../../websocket/websocket.gateway';
 import { OrderItemResponseDto } from '../dto/order-item-response.dto';
 
 export interface OrderNewPayload {
@@ -29,21 +30,31 @@ export interface OrderStatusChangedPayload {
 
 @Injectable()
 export class EventsEmitterService {
-  // TODO: Implement WebSocket event emission
-  // This service will emit events to connected clients via WebSocket
+  constructor(private readonly realtimeGateway: RealtimeGateway) {}
 
   async emitOrderNew(payload: OrderNewPayload): Promise<void> {
-    // TODO: Emit 'order.new' event via WebSocket gateway
-    console.log('[EventsEmitter] order.new:', JSON.stringify(payload, null, 2));
+    // Emit order.new event
+    this.realtimeGateway.emitToRestaurant(payload.restaurantId, 'order.new', payload);
+
+    // Also emit order.status.changed for DRAFT -> CONFIRMED transition
+    this.realtimeGateway.emitToRestaurant(payload.restaurantId, 'order.status.changed', {
+      orderId: payload.orderId,
+      restaurantId: payload.restaurantId,
+      previousStatus: 'DRAFT',
+      newStatus: payload.status,
+      updatedAt: payload.createdAt,
+    });
   }
 
   async emitOrderItemStatusChanged(payload: OrderItemStatusChangedPayload): Promise<void> {
-    // TODO: Emit 'order.item.status.changed' event via WebSocket gateway
-    console.log('[EventsEmitter] order.item.status.changed:', JSON.stringify(payload, null, 2));
+    this.realtimeGateway.emitToRestaurant(
+      payload.restaurantId,
+      'order.item.status.changed',
+      payload,
+    );
   }
 
   async emitOrderStatusChanged(payload: OrderStatusChangedPayload): Promise<void> {
-    // TODO: Emit 'order.status.changed' event via WebSocket gateway
-    console.log('[EventsEmitter] order.status.changed:', JSON.stringify(payload, null, 2));
+    this.realtimeGateway.emitToRestaurant(payload.restaurantId, 'order.status.changed', payload);
   }
 }

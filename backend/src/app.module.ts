@@ -6,6 +6,8 @@ import { TablesModule } from './modules/tables/tables.module';
 import { TableSessionsModule } from './modules/table-sessions/table-sessions.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { WebSocketModule } from './websocket/websocket.module';
+
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     TablesModule,
     TableSessionsModule,
     OrdersModule,
+    WebSocketModule,
   ],
   controllers: [],
   providers: [],
