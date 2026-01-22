@@ -69,6 +69,17 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
+.statusDot[data-connecting='true'] {
+  background-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.statusDot[data-error='true'] {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;

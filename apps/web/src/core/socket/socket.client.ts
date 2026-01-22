@@ -1,17 +1,17 @@
 import { io, Socket } from 'socket.io-client';
-
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
+import { WS_URL } from '../config/env';
 
 /**
  * Crea una instancia de Socket.IO con autenticación JWT
- * @param token JWT token para autenticación
+ * @param token JWT token para autenticación (raw JWT string)
  * @returns Instancia de Socket.IO
  */
 export function createSocket(token: string): Socket {
   return io(WS_URL, {
     transports: ['websocket'],
+    autoConnect: false, // Connect manually with connectWithToken
     auth: {
-      token,
+      token, // Send raw JWT string in handshake.auth.token
     },
     reconnection: true,
     reconnectionDelay: 1000,

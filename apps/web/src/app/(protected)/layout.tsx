@@ -33,16 +33,18 @@ export default function ProtectedLayout({
       const currentState = useAuthStore.getState();
       if (currentState.status === 'anon' || !currentState.token) {
         router.replace('/login');
+        return;
+      }
+
+      // Conectar socket si está autenticado y no está conectado
+      if (currentState.status === 'authenticated' && currentState.token) {
+        if (socketStatus === 'disconnected') {
+          console.log('[ProtectedLayout] Connecting socket with token');
+          connect(currentState.token);
+        }
       }
     }, 100);
     return () => clearTimeout(timer);
-
-    if (authStatus === 'authenticated' && token) {
-      // Conectar socket si no está conectado
-      if (socketStatus === 'disconnected') {
-        connect(token);
-      }
-    }
   }, [authStatus, token, socketStatus, connect, router]);
 
   // Bootstrap: cargar snapshot y bindear eventos cuando socket se conecta

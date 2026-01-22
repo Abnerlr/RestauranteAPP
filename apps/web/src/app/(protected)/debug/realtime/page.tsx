@@ -3,12 +3,12 @@
 import { useSocketStore } from '@/core/socket/socket.store';
 import { useOrdersStore } from '@/features/orders/store/orders.store';
 import { useAuthStore } from '@/core/auth/auth.store';
-import { decodeJwt, validateJwtPayload } from '@/core/auth/jwt';
-import { AUTH_TOKEN_KEY } from '@/core/auth/constants';
+import { getAuthToken, getRestaurantId, getRole } from '@/shared/auth/auth-helpers';
+import { WS_URL } from '@/core/config/env';
 import { OrderStatus } from '@restaurante-app/contracts';
 
 export default function RealtimeDebugPage() {
-  const { status: socketStatus, error: socketError } = useSocketStore();
+  const { status: socketStatus, error: socketError, lastError, getSocket } = useSocketStore();
   const { user, token } = useAuthStore();
   const {
     entities,
@@ -18,9 +18,12 @@ export default function RealtimeDebugPage() {
   } = useOrdersStore();
 
   // Debug info del token
-  const tokenPresent = typeof window !== 'undefined' && !!localStorage.getItem(AUTH_TOKEN_KEY);
-  const tokenDecoded = token ? decodeJwt(token) : null;
-  const tokenValid = tokenDecoded ? validateJwtPayload(tokenDecoded) : false;
+  const authToken = token || getAuthToken();
+  const tokenPresent = !!authToken;
+  const restaurantId = getRestaurantId();
+  const role = getRole();
+  const socket = getSocket();
+  const listenersCount = socket ? socket.listeners('connect').length + socket.listeners('disconnect').length : 0;
 
   const allOrderIds = getAllOrderIds();
   const last10OrderIds = allOrderIds.slice(-10).reverse();
@@ -63,28 +66,15 @@ export default function RealtimeDebugPage() {
             </code>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <strong>Token válido:</strong>{' '}
-            <code style={{ color: tokenValid ? '#22c55e' : '#ef4444' }}>
-              {tokenValid ? 'Sí' : 'No'}
+            <strong>Restaurant ID:</strong>{' '}
+            <code style={{ color: restaurantId ? '#22c55e' : '#ef4444' }}>
+              {restaurantId || 'N/A'}
             </code>
           </div>
-          {tokenDecoded && (
-            <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-              <div>
-                <strong>Decodificado:</strong>
-              </div>
-              <div style={{ marginTop: '0.25rem' }}>
-                <strong>Role:</strong> {tokenDecoded.role || 'N/A'} |{' '}
-                <strong>Restaurant ID:</strong> {tokenDecoded.restaurantId || 'N/A'} |{' '}
-                <strong>User ID:</strong> {tokenDecoded.userId || 'N/A'}
-              </div>
-              {tokenDecoded.exp && (
-                <div style={{ marginTop: '0.25rem' }}>
-                  <strong>Expira:</strong> {new Date(tokenDecoded.exp * 1000).toLocaleString()}
-                </div>
-              )}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <strong>Role:</strong>{' '}
+            <code>{role || 'N/A'}</code>
+          </div>
           {user && (
             <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
               <strong>Usuario (store):</strong> {user.userId} | <strong>Rol:</strong> {user.role} |{' '}
@@ -97,22 +87,47 @@ export default function RealtimeDebugPage() {
       {/* Estado de conexión */}
       <section style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
         <h2 style={{ marginTop: 0 }}>Estado de Conexión WebSocket</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-          <div
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              backgroundColor: getStatusColor(socketStatus),
-            }}
-          />
-          <strong>Socket Status:</strong> <code>{socketStatus}</code>
-        </div>
-        {socketError && (
-          <div style={{ marginTop: '0.5rem', color: '#ef4444' }}>
-            <strong>Error:</strong> {socketError}
+        <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div
+              style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                backgroundColor: getStatusColor(socketStatus),
+              }}
+            />
+            <strong>Socket Status:</strong> <code>{socketStatus}</code>
           </div>
-        )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <strong>WS URL:</strong> <code style={{ fontSize: '0.875rem' }}>{WS_URL || 'Not configured'}</code>
+          </div>
+          {socketError && (
+            <div style={{ marginTop: '0.5rem', color: '#ef4444' }}>
+              <strong>Error actual:</strong> {socketError}
+            </div>
+          )}
+          {lastError && (
+            <div style={{ marginTop: '0.5rem', color: '#f59e0b' }}>
+              <strong>Último error:</strong> {lastError}
+            </div>
+          )}
+          {socket && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+              <strong>Socket ID:</strong> {socket.id || 'Not connected'} |{' '}
+              <strong>Connected:</strong> {socket.connected ? 'Yes' : 'No'} |{' '}
+              <strong>Listeners:</strong> {listenersCount}
+            </div>
+          )}
+          {restaurantId && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+              <strong>Room esperado:</strong> <code>restaurant:{restaurantId}</code>
+              <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#999' }}>
+                (El backend hace join automático en el middleware de autenticación)
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Estadísticas de órdenes */}
