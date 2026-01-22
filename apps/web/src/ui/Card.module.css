@@ -1,0 +1,37 @@
+.card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+}
+
+.cardHeader {
+  margin-bottom: var(--space-md);
+}
+
+.cardTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.cardContent {
+  color: var(--text);
+}
+
+.cardHighlight {
+  animation: highlight 2s ease-out;
+}
+
+@keyframes highlight {
+  0% {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  100% {
+    border-color: var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+}

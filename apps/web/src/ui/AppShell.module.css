@@ -1,0 +1,89 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.appName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.navLink {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+}
+
+.navLink:hover {
+  color: var(--text);
+  background-color: var(--bg);
+}
+
+.navLinkActive {
+  color: var(--accent);
+  background-color: rgba(37, 99, 235, 0.15);
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-xl) 0;
+}
+
+.banner {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  padding: var(--space-sm) var(--space-lg);
+  text-align: center;
+  font-size: 0.875rem;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+  
+  .topbarRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .nav {
+    flex-wrap: wrap;
+  }
+}

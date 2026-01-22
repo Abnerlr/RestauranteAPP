@@ -1,0 +1,73 @@
+.orderCard {
+  margin-bottom: var(--space-lg);
+}
+
+.orderHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  gap: var(--space-md);
+}
+
+.orderMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.orderItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.orderItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--bg);
+  border-radius: var(--radius-md);
+  gap: var(--space-md);
+}
+
+.orderItemInfo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.orderItemName {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.orderItemQty {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.orderItemActions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-muted);
+}
+
+.emptyStateTitle {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: var(--space-sm);
+}
+
+.emptyStateDescription {
+  font-size: 0.875rem;
+}

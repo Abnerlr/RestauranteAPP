@@ -9,3 +9,62 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
 }
+
+/* Design Tokens - Dark Professional Theme */
+:root {
+  /* Colors - Dark Professional Palette */
+  --bg: #0f1115;
+  --bg-panel: #161a22;
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+  --border: #232837;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  
+  /* Status Colors - Adjusted for dark theme */
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  --muted: #6b7280;
+  
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  
+  /* Shadows - Dark theme shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-md);
+  }
+}

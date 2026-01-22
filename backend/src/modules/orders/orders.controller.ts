@@ -27,7 +27,7 @@ import { ReqRestaurantId } from '../../common/decorators/tenant.decorator';
 import { CurrentUser } from '../../common/types/auth.types';
 import { Role } from '@prisma/client';
 
-@Controller('api/v1/orders')
+@Controller('orders')
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}

@@ -3,7 +3,7 @@ import { RestaurantsService } from './restaurants.service';
 import { BootstrapDto } from './dto/bootstrap.dto';
 import { BootstrapResponseDto } from './dto/bootstrap-response.dto';
 
-@Controller('api/v1/restaurants')
+@Controller('restaurants')
 export class RestaurantsController {
   constructor(private readonly restaurantsService: RestaurantsService) {}
 

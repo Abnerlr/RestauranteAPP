@@ -4,7 +4,7 @@
 This document defines the API contracts for RestauranteApp.
 
 ## Base URL
-- Development: `http://localhost:3000`
+- Development: `http://localhost:3001`
 - Production: [To be defined]
 
 ## Authentication

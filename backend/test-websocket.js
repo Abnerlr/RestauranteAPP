@@ -2,7 +2,7 @@ const io = require('socket.io-client');
 
 // Obtén un token JWT primero desde el endpoint de login
 const TOKEN = process.argv[2] || 'your-jwt-token-here';
-const WS_URL = process.env.WS_URL || 'http://localhost:3000';
+const WS_URL = process.env.WS_URL || 'http://localhost:3001';
 
 if (TOKEN === 'your-jwt-token-here') {
   console.error('❌ Error: Please provide a JWT token as argument');

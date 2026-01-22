@@ -4,6 +4,17 @@ import { OrderStatus, OrderItemStatus } from '../types';
 import { OrderItemResponseDto } from '../dto/orders';
 
 /**
+ * WebSocket event names
+ */
+export const WS_EVENTS = {
+  ORDER_NEW: 'order.new',
+  ORDER_STATUS_CHANGED: 'order.status.changed',
+  ORDER_ITEM_STATUS_CHANGED: 'order.item.status.changed',
+  TABLE_CHECKOUT_REQUESTED: 'table.checkout.requested',
+  PAYMENT_COMPLETED: 'payment.completed',
+} as const;
+
+/**
  * order.new event payload
  * Emitted when an order is confirmed (POST /api/v1/orders/:orderId/confirm)
  * This event is sent to the kitchen to notify that a new order is ready for preparation

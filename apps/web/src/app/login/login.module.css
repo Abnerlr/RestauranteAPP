@@ -1,0 +1,155 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-xl);
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: var(--space-xs) 0 0 0;
+  font-weight: 400;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: var(--space-xs);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-md);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.button {
+  width: 100%;
+  margin-top: var(--space-xs);
+}
+
+.error {
+  padding: var(--space-sm) var(--space-md);
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.note kbd {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.footerNote {
+  margin-top: var(--space-xl);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 480px;
+}
+
+/* Debug Panel */
+.debugCard {
+  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.debugGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.debugItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.debugLabel {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.debugValue {
+  font-family: monospace;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-lg);
+  }
+  
+  .card {
+    max-width: 100%;
+  }
+
+  .debugCard {
+    max-width: 100%;
+  }
+
+  .debugGrid {
+    grid-template-columns: 1fr;
+  }
+}

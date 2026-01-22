@@ -7,6 +7,7 @@ import { TableSessionsModule } from './modules/table-sessions/table-sessions.mod
 import { OrdersModule } from './modules/orders/orders.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { WebSocketModule } from './websocket/websocket.module';
+import { AppController } from './app.controller';
 
 
 @Module({
@@ -23,7 +24,7 @@ import { WebSocketModule } from './websocket/websocket.module';
     OrdersModule,
     WebSocketModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}

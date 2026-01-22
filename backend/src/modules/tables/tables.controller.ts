@@ -17,7 +17,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { ReqRestaurantId } from '../../common/decorators/tenant.decorator';
 import { Role } from '@prisma/client';
 
-@Controller('api/v1/tables')
+@Controller('tables')
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class TablesController {
   constructor(private readonly tablesService: TablesService) {}
